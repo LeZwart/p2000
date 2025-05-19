@@ -15,10 +15,30 @@ for pagina in range(0, 1001):
 
     rows = soup.find_all("tr")
 
-    i = 0
-    while i < len(rows):
-        cells = rows[i].find_all("td")
+    for index, row in enumerate(rows):
+        cells = row.find_all("td")
         if len(cells) == 4 and "DT" in cells[0].get("class", []):
+
+            # FIXME: Duplicates capcodes somehow
+            capcodes = []
+            for next_row in rows[index + 1:]:
+                td = next_row.find("td", class_="OmsAm")
+                if td:
+                    raw_capcode = td.text.strip()
+
+                    capcode = raw_capcode.split()[0]
+                    if len(capcode) == 6:
+                        capcode = "0" + capcode
+                    elif len(capcode) == 7:
+                        capcode = capcode
+                    else:
+                        continue
+                    capcodes.append(capcode)
+                elif not next_row.find_all("td"):
+                    continue
+                else:
+                    break
+
             bericht = {
                 "datetime": cells[0].text.strip(),
                 "type": cells[1].text.strip(),
@@ -26,9 +46,8 @@ for pagina in range(0, 1001):
                 "message": cells[3].text.strip()
             }
             berichten.append(bericht)
-        i += 1
-        break
+
     print(f"Page {pagina}/1000 processed.")
 
-with open("berichten.json", "a") as f:
+with open("berichten.json", "w", encoding="utf-8") as f:
     json.dump(berichten, f, ensure_ascii=False, indent=4)
