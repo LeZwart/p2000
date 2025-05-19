@@ -27,7 +27,6 @@ for pagina in range(0, 1001):
             }
             berichten.append(bericht)
         i += 1
-        break
     print(f"Page {pagina}/1000 processed.")
 
 with open("berichten.json", "a") as f:
