@@ -1,6 +1,9 @@
+import time
+from datetime import datetime
+import re
+
 import requests
 from bs4 import BeautifulSoup
-import re
 
 url = "https://monitor.p2kflex.nl/hdb/engine.php"
 headers = {
@@ -50,19 +53,13 @@ def scrape_region(region, limit=50):
                 break
         return capcodes
 
-    # Example timestamp 13:05:51 03-06-25
-    def convert_timestamp(timestamp):
-        """Converts timestamp to unix timestamp."""
+    def to_unix_epoch(date_str):
+        # Assuming format is "HH:MM:SS DD-MM-YY"
+        dt = datetime.strptime(date_str, "%H:%M:%S %d-%m-%y")
 
-        match = re.match(
-            r"(\d{2}:\d{2}:\d{2}) (\d{2})-(\d{2})-(\d{2})", timestamp)
+        # Convert to Unix timestamp
+        return int(time.mktime(dt.timetuple()))
 
-        if match:
-            time_str, day, month, year = match.groups()
-            year = int(year) + 2000  # Assuming year is in 2000s
-            return f"{year}-{month}-{day} {time_str}"
-        return timestamp
-    
     params = {
         "id": "0",
         "regio": region,
@@ -84,7 +81,7 @@ def scrape_region(region, limit=50):
                 continue
 
             message_data.append({
-                "timestamp": cells[0].text.strip(),
+                "timestamp": to_unix_epoch(cells[0].text.strip()),
                 "type": cells[1].text.strip(),
                 "message": cells[2].text,
                 "capcodes": parse_capcodes(index),
