@@ -32,7 +32,7 @@ def scrape_region(region, limit=50):
             if match:
                 coords = match.group(1)
                 lat, lon = coords.split(",")
-                return {"lat": float(lat), "lon": float(lon)}
+                return lat.strip(), lon.strip()
         return None
 
     def parse_vehicle(message_cell):
@@ -80,12 +80,13 @@ def scrape_region(region, limit=50):
                 first_message = False
                 continue
 
+            lat, lon = parse_coords(cells[2])
             message_data.append({
                 "timestamp": to_unix_epoch(cells[0].text.strip()),
                 "type": cells[1].text.strip(),
                 "message": cells[2].text,
                 "capcodes": parse_capcodes(index),
-                "coords": parse_coords(cells[2]),
+                "coords": (lat, lon) if lat and lon else None,
                 "vehicles": parse_vehicle(cells[2]),
             })
     return message_data
