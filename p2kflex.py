@@ -1,4 +1,3 @@
-import time
 from datetime import datetime
 import re
 
@@ -53,12 +52,13 @@ def scrape_region(region, limit=50):
                 break
         return capcodes
 
-    def to_unix_epoch(date_str):
+    def to_datetime(date_str):
+        """Converts a date string to SQL Server datetime format."""
         # Assuming format is "HH:MM:SS DD-MM-YY"
         dt = datetime.strptime(date_str, "%H:%M:%S %d-%m-%y")
 
-        # Convert to Unix timestamp
-        return int(time.mktime(dt.timetuple()))
+        # SQL Server datetime format: 'YYYY-MM-DD HH:MM:SS'
+        return dt.strftime("%Y-%m-%d %H:%M:%S")
 
     params = {
         "id": "0",
@@ -80,9 +80,14 @@ def scrape_region(region, limit=50):
                 first_message = False
                 continue
 
-            lat, lon = parse_coords(cells[2])
+            coords = parse_coords(cells[2])
+            if coords:
+                lat, lon = coords
+            else:
+                lat, lon = None, None
+
             message_data.append({
-                "timestamp": to_unix_epoch(cells[0].text.strip()),
+                "timestamp": to_datetime(cells[0].text.strip()),
                 "type": cells[1].text.strip(),
                 "message": cells[2].text,
                 "capcodes": parse_capcodes(index),
