@@ -50,6 +50,8 @@ def scrape_region(region, limit=50):
                 capcodes.append(children[1].text.strip())
             else:
                 break
+
+        capcodes = list(set(capcodes))
         return capcodes
 
     def to_datetime(date_str):

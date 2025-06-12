@@ -13,9 +13,14 @@ def main():
     for i in range(1, REGION_COUNT + 1):
         region = f"R{i}"
 
-        region_data = scrape_region(region, LIMIT)
-        all_messages.extend(region_data)
-        print(f"Scraped data for {region}: {len(region_data)} records")
+        region_data = []
+        while len(region_data) == 0:
+            region_data = scrape_region(region, LIMIT)
+            all_messages.extend(region_data)
+            if len(region_data) == 0:
+                print(f"No data found for region {region}, retrying...")
+            else:
+                print(f"Scraped {len(region_data)} records from region {region}")
     print(f"Total records scraped: {len(all_messages)}")
 
     for message in all_messages:
