@@ -103,3 +103,13 @@ def insert_into_table(cursor, table_name, data):
         f"{', '.join(['?' for _ in range(column_length)])})"
     )
     cursor.execute(insert_stmt, list(data.values()))
+
+
+def get_capcode_id(cursor, capcode):
+    """Get the ID of a capcode from the database"""
+    cursor.execute(
+        "SELECT id FROM Capcode WHERE capcode = ?",
+        (capcode,)
+    )
+    row = cursor.fetchone()
+    return row[0] if row else None

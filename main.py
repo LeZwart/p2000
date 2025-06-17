@@ -1,68 +1,76 @@
-import subprocess
 import SQLServer
+from p2kflex import scrape_region
 
-conn = ["rtl_fm", "-f", "169.65M", "-s", "22050", "-g", "50"]
-decoder = ["multimon-ng", "-a", "FLEX", "-t", "raw", "-"]
-db_conn = SQLServer.connect("P2000")
-
-
-def parse_melding(raw_melding):
-    parts = raw_melding.strip().split("|")
-    if len(parts) != 7:
-        raise ValueError(
-            f"Invalid melding format: length = {len(parts)} '{parts}'"
-        )
-    return {
-        "date": parts[1],
-        "description": parts[6],
-        "capcodes": parts[4].split()
-    }
-
-
-def add_capcode_to_db(capcode):
-    pass
+REGION_COUNT = 25
+LIMIT = 30000
 
 
 def main():
-    rtl_fm_proc = subprocess.Popen(
-        conn, stdout=subprocess.PIPE, stderr=subprocess.PIPE
+    conn = SQLServer.connect("P2000")
+    cursor = conn.cursor()
+
+    all_messages = []
+    for i in range(1, REGION_COUNT + 1):
+        region = f"R{i}"
+
+        region_data = []
+        while len(region_data) == 0:
+            region_data = scrape_region(region, LIMIT)
+            all_messages.extend(region_data)
+            if len(region_data) == 0:
+                print(f"No data found for region {region}, retrying...")
+            else:
+                print(f"Scraped {len(region_data)} records from region {region}")
+    print(f"Total records scraped: {len(all_messages)}")
+
+    for message in all_messages:
+        save_message_to_db(message, cursor)
+    conn.commit()
+
+
+def save_message_to_db(message, cursor):
+    """Saves a single message to the database."""
+
+    STMT = (
+        "INSERT INTO Bericht (datum, beschrijving, lat, lon) "
+        "VALUES (?, ?, ?, ?)"
     )
-    multimon_proc = subprocess.Popen(
-        decoder,
-        stdin=rtl_fm_proc.stdout,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        universal_newlines=True
-    )
 
-    while True:
-        melding = multimon_proc.stdout.readline()
-        if melding:
-            try:
-                parsed_melding = parse_melding(melding)
-                print(f"Date: {parsed_melding['date']}")
-                print(f"Description: {parsed_melding['description']}")
-                capcodes = [
-                    capcode[2:] for capcode in parsed_melding['capcodes']
-                ]
+    lat, lon = None, None
+    if "coords" in message and message["coords"] is not None:
+        lat, lon = message["coords"]
 
-                for capcode in capcodes:
-                    stmt = f"SELECT * FROM Capcode WHERE capcode = '{capcode}'"
+    cursor.execute(STMT, (
+        message["timestamp"],
+        message["message"],
+        lat,
+        lon
+    ))
 
-                    cursor = db_conn.cursor()
-                    cursor.execute(stmt)
-                    result = cursor.fetchone()
-                    if not result:
-                        print(f"Capcode {capcode} not found in database.")
-                    else:
-                        print(
-                            (f"{result[1]} {result[2]} {result[3]} "
-                             f"{result[4]} | {result[5]}")
-                        )
+    # Retrieve the last inserted bericht_id
+    cursor.execute("SELECT MAX(id) FROM Bericht")
+    bericht_id = cursor.fetchone()[0]
 
-                print("-"*50)
-            except ValueError:
-                pass
+    if bericht_id is None:
+        bericht_id = 1
+
+    # Insert relation to capcodes
+    for capcode in message["capcodes"]:
+        capcode_id = SQLServer.get_capcode_id(cursor, capcode)
+        if capcode_id is None:
+            cursor.execute(
+                "INSERT INTO Capcode (capcode) VALUES (?)",
+                (capcode,)
+            )
+            capcode_id = SQLServer.get_capcode_id(cursor, capcode)
+
+        cursor.execute(
+            "INSERT INTO BerichtCapcode (bericht_id, capcode_id) "
+            "VALUES (?, ?)",
+            (bericht_id, capcode_id)
+        )
+
+    return
 
 
 if __name__ == "__main__":
