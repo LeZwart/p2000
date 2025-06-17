@@ -20,7 +20,9 @@ def main():
             if len(region_data) == 0:
                 print(f"No data found for region {region}, retrying...")
             else:
-                print(f"Scraped {len(region_data)} records from region {region}")
+                print(
+                    f"Scraped {len(region_data)} records from region {region}"
+                    )
     print(f"Total records scraped: {len(all_messages)}")
 
     for message in all_messages:
