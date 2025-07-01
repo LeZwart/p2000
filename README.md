@@ -1,6 +1,6 @@
 # P2000 p2kflex HDB Scraper
 
-A webscraper that gathers information about P2000 — the Dutch public emergency service communications system.
+A webscraper that gathers information about P2000, the Dutch public emergency service communications system.
 
 ## P2000
 
@@ -15,3 +15,4 @@ Unlike C2000 which is encrypted, P2000 is publicly accessible, and several websi
 ### Python
 
 ### Database
+Microsoft SQL Server
